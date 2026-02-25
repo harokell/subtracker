@@ -54,10 +54,22 @@ npm run build
 
 ## 📲 如何在手机上使用
 
-1. 用 Safari 打开 [harokell.github.io/subtracker](https://harokell.github.io/subtracker/)
+### iPhone / iPad（Safari）
+
+1. 用 **Safari** 打开 [harokell.github.io/subtracker](https://harokell.github.io/subtracker/)
 2. 点击底部 **分享按钮** ⬆️
 3. 选择 **"添加到主屏幕"**
 4. 像原生 App 一样使用！
+
+### 安卓手机（Chrome）
+
+1. 用 **Chrome** 打开 [harokell.github.io/subtracker](https://harokell.github.io/subtracker/)
+2. 点击右上角 **⋮ 菜单**
+3. 选择 **"添加到主屏幕"** 或 **"安装应用"**
+4. 确认安装，桌面会出现 App 图标
+5. 像原生 App 一样使用！
+
+> 💡 **提示**：安装后 App 支持离线使用，数据保存在手机本地，不会上传到服务器。
 
 ## 📄 License
 
