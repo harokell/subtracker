@@ -1,12 +1,15 @@
 // ===== SubTracker App Core =====
 import {
-    getAllSubscriptions,
-    addSubscription,
-    updateSubscription,
-    deleteSubscription,
-    getCategoryById,
-    CATEGORIES,
-    EMOJI_OPTIONS,
+  getAllSubscriptions,
+  addSubscription,
+  updateSubscription,
+  deleteSubscription,
+  getCategoryById,
+  getBillingCycleById,
+  getMonthlyAmount,
+  CATEGORIES,
+  BILLING_CYCLES,
+  EMOJI_OPTIONS,
 } from './db.js';
 
 let currentPage = 'dashboard';
@@ -16,77 +19,77 @@ let editingId = null;
 
 // ===== Helpers =====
 function formatCurrency(amount) {
-    return `¥${amount.toFixed(2)}`;
+  return `¥${amount.toFixed(2)}`;
 }
 
 function getToday() {
-    return new Date();
+  return new Date();
 }
 
 function getDaysUntilBilling(billingDay) {
-    const today = getToday();
-    const currentDay = today.getDate();
-    const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+  const today = getToday();
+  const currentDay = today.getDate();
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
 
-    if (billingDay === currentDay) return 0;
-    if (billingDay > currentDay) return billingDay - currentDay;
-    return daysInMonth - currentDay + billingDay;
+  if (billingDay === currentDay) return 0;
+  if (billingDay > currentDay) return billingDay - currentDay;
+  return daysInMonth - currentDay + billingDay;
 }
 
 function getUpcomingSubs(subs, limit = 5) {
-    return subs
-        .filter((s) => s.active)
-        .map((s) => ({ ...s, daysUntil: getDaysUntilBilling(s.billingDay) }))
-        .sort((a, b) => a.daysUntil - b.daysUntil)
-        .slice(0, limit);
+  return subs
+    .filter((s) => s.active)
+    .map((s) => ({ ...s, daysUntil: getDaysUntilBilling(s.billingDay) }))
+    .sort((a, b) => a.daysUntil - b.daysUntil)
+    .slice(0, limit);
 }
 
 function getMonthlyTotal(subs) {
-    return subs.filter((s) => s.active).reduce((sum, s) => sum + s.amount, 0);
+  return subs.filter((s) => s.active).reduce((sum, s) => sum + getMonthlyAmount(s), 0);
 }
 
 function getCategorySummary(subs) {
-    const activeSubs = subs.filter((s) => s.active);
-    const total = getMonthlyTotal(activeSubs);
-    const map = {};
+  const activeSubs = subs.filter((s) => s.active);
+  const total = getMonthlyTotal(activeSubs);
+  const map = {};
 
-    activeSubs.forEach((s) => {
-        if (!map[s.category]) {
-            map[s.category] = { amount: 0, count: 0 };
-        }
-        map[s.category].amount += s.amount;
-        map[s.category].count++;
-    });
+  activeSubs.forEach((s) => {
+    if (!map[s.category]) {
+      map[s.category] = { amount: 0, count: 0 };
+    }
+    map[s.category].amount += getMonthlyAmount(s);
+    map[s.category].count++;
+  });
 
-    return Object.entries(map)
-        .map(([catId, data]) => {
-            const cat = getCategoryById(catId);
-            return {
-                ...cat,
-                ...data,
-                percentage: total > 0 ? (data.amount / total) * 100 : 0,
-            };
-        })
-        .sort((a, b) => b.amount - a.amount);
+  return Object.entries(map)
+    .map(([catId, data]) => {
+      const cat = getCategoryById(catId);
+      return {
+        ...cat,
+        ...data,
+        percentage: total > 0 ? (data.amount / total) * 100 : 0,
+      };
+    })
+    .sort((a, b) => b.amount - a.amount);
 }
 
 function getFilteredSubs(subs) {
-    const filtered =
-        activeFilter === 'all'
-            ? subs
-            : subs.filter((s) => s.category === activeFilter);
-    // Sort: active first, then by amount descending
-    return filtered.sort((a, b) => {
-        if (a.active !== b.active) return b.active - a.active;
-        return b.amount - a.amount;
-    });
+  const filtered =
+    activeFilter === 'all'
+      ? subs
+      : subs.filter((s) => s.category === activeFilter);
+  // Sort: active first, then by amount descending
+  return filtered.sort((a, b) => {
+    if (a.active !== b.active) return b.active - a.active;
+    return getMonthlyAmount(b) - getMonthlyAmount(a);
+  });
 }
 
 // ===== Rendering =====
 export function renderApp() {
-    const app = document.getElementById('app');
+  const app = document.getElementById('app');
 
-    app.innerHTML = `
+  app.innerHTML = `
     <div class="bg-glow"></div>
     <div class="bg-glow bg-glow--secondary"></div>
     
@@ -142,18 +145,18 @@ export function renderApp() {
     <div class="toast" id="toast"></div>
   `;
 
-    bindEvents();
+  bindEvents();
 }
 
 function renderDashboard() {
-    const activeSubs = allSubs.filter((s) => s.active);
-    const total = getMonthlyTotal(allSubs);
-    const upcoming = getUpcomingSubs(allSubs);
-    const catSummary = getCategorySummary(allSubs);
-    const today = getToday();
-    const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
+  const activeSubs = allSubs.filter((s) => s.active);
+  const total = getMonthlyTotal(allSubs);
+  const upcoming = getUpcomingSubs(allSubs);
+  const catSummary = getCategorySummary(allSubs);
+  const today = getToday();
+  const monthNames = ['一月', '二月', '三月', '四月', '五月', '六月', '七月', '八月', '九月', '十月', '十一月', '十二月'];
 
-    return `
+  return `
     <header class="header animate-fadeInUp">
       <p class="header__greeting">${monthNames[today.getMonth()]} · 月度固定支出</p>
       <h1 class="header__title">订阅管理</h1>
@@ -194,16 +197,17 @@ function renderDashboard() {
       </div>
       <div class="upcoming-list">
         ${upcoming.map((s) => {
-        const cat = getCategoryById(s.category);
-        return `
+    const cat = getCategoryById(s.category);
+    const cycle = getBillingCycleById(s.billingCycle);
+    return `
             <div class="upcoming-card">
               <div class="upcoming-card__icon">${s.icon}</div>
               <div class="upcoming-card__name">${s.name}</div>
               <div class="upcoming-card__date">${s.daysUntil === 0 ? '今天' : s.daysUntil + '天后'} · ${s.billingDay}号</div>
-              <div class="upcoming-card__amount">${formatCurrency(s.amount)}</div>
+              <div class="upcoming-card__amount">${formatCurrency(s.amount)}<span style="font-size:0.7rem;color:rgba(168,85,247,0.7);">${cycle.label}</span></div>
             </div>
           `;
-    }).join('')}
+  }).join('')}
       </div>
     </div>
     ` : ''}
@@ -238,9 +242,9 @@ function renderDashboard() {
 }
 
 function renderListPage() {
-    const filtered = getFilteredSubs(allSubs);
+  const filtered = getFilteredSubs(allSubs);
 
-    return `
+  return `
     <header class="header animate-fadeInUp">
       <h1 class="header__title">全部订阅</h1>
       <p class="header__greeting">共 ${allSubs.length} 项 · 活跃 ${allSubs.filter(s => s.active).length} 项</p>
@@ -261,21 +265,23 @@ function renderListPage() {
       ${filtered.length > 0 ? `
       <div class="sub-list">
         ${filtered.map((s, i) => {
-        const cat = getCategoryById(s.category);
-        return `
+    const cat = getCategoryById(s.category);
+    const cycle = getBillingCycleById(s.billingCycle);
+    const monthlyAmt = getMonthlyAmount(s);
+    return `
             <div class="sub-item ${!s.active ? 'sub-item--inactive' : ''} animate-fadeInUp delay-${Math.min(i + 1, 6)}" data-id="${s.id}">
               <div class="sub-item__icon" style="background: ${cat.gradient};">${s.icon}</div>
               <div class="sub-item__info">
                 <div class="sub-item__name">${s.name}</div>
-                <div class="sub-item__detail">${cat.icon} ${cat.name} · 每月${s.billingDay}号${!s.active ? ' · 已暂停' : ''}</div>
+                <div class="sub-item__detail">${cat.icon} ${cat.name} · ${cycle.name} · ${s.billingDay}号${!s.active ? ' · 已暂停' : ''}</div>
               </div>
               <div class="sub-item__amount">
                 ${formatCurrency(s.amount)}
-                <div class="sub-item__amount-period">/月</div>
+                <div class="sub-item__amount-period">${cycle.label}${cycle.id !== 'monthly' ? ' (≈' + formatCurrency(monthlyAmt) + '/月)' : ''}</div>
               </div>
             </div>
           `;
-    }).join('')}
+  }).join('')}
       </div>
       ` : `
       <div class="empty-state">
@@ -289,12 +295,12 @@ function renderListPage() {
 }
 
 function renderStatsPage() {
-    const activeSubs = allSubs.filter((s) => s.active);
-    const total = getMonthlyTotal(allSubs);
-    const catSummary = getCategorySummary(allSubs);
-    const daily = total / 30;
+  const activeSubs = allSubs.filter((s) => s.active);
+  const total = getMonthlyTotal(allSubs);
+  const catSummary = getCategorySummary(allSubs);
+  const daily = total / 30;
 
-    return `
+  return `
     <header class="header animate-fadeInUp">
       <h1 class="header__title">支出统计</h1>
       <p class="header__greeting">数据总览</p>
@@ -354,17 +360,20 @@ function renderStatsPage() {
       </div>
       <div class="category-summary">
         ${activeSubs
-                .sort((a, b) => b.amount - a.amount)
-                .slice(0, 8)
-                .map((s) => `
+        .sort((a, b) => getMonthlyAmount(b) - getMonthlyAmount(a))
+        .slice(0, 8)
+        .map((s) => {
+          const mAmt = getMonthlyAmount(s);
+          return `
             <div class="category-row">
               <span class="category-row__label">${s.icon} ${s.name}</span>
               <div class="category-row__bar-bg">
-                <div class="category-row__bar" style="width: ${total > 0 ? (s.amount / total * 100) : 0}%; background: ${getCategoryById(s.category).gradient};"></div>
+                <div class="category-row__bar" style="width: ${total > 0 ? (mAmt / total * 100) : 0}%; background: ${getCategoryById(s.category).gradient};"></div>
               </div>
-              <span class="category-row__amount">${formatCurrency(s.amount)}</span>
+              <span class="category-row__amount">${formatCurrency(mAmt)}/月</span>
             </div>
-          `).join('')}
+          `;
+        }).join('')}
       </div>
     </div>
     ` : ''}
@@ -372,13 +381,13 @@ function renderStatsPage() {
 }
 
 function renderFormModal(sub = null) {
-    editingId = sub ? sub.id : null;
-    const isEdit = !!sub;
-    const selectedIcon = sub ? sub.icon : '📦';
+  editingId = sub ? sub.id : null;
+  const isEdit = !!sub;
+  const selectedIcon = sub ? sub.icon : '📦';
 
-    document.getElementById('modal-title').textContent = isEdit ? '编辑订阅' : '添加订阅';
+  document.getElementById('modal-title').textContent = isEdit ? '编辑订阅' : '添加订阅';
 
-    document.getElementById('modal-body').innerHTML = `
+  document.getElementById('modal-body').innerHTML = `
     <form id="sub-form">
       <div class="form-group">
         <label class="form-label">图标</label>
@@ -396,7 +405,16 @@ function renderFormModal(sub = null) {
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="form-amount">每月金额 (¥)</label>
+        <label class="form-label" for="form-cycle">扣费周期</label>
+        <select class="form-input" id="form-cycle">
+          ${BILLING_CYCLES.map((c) => `
+            <option value="${c.id}" ${sub && sub.billingCycle === c.id ? 'selected' : ''}>${c.name}（${c.id === 'monthly' ? '每月扣费' : c.id === 'quarterly' ? '每3个月扣费' : '每年扣费'}）</option>
+          `).join('')}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label" for="form-amount" id="form-amount-label">金额 (¥)</label>
         <input class="form-input" type="number" id="form-amount" placeholder="0.00" step="0.01" min="0" value="${sub ? sub.amount : ''}" required />
       </div>
 
@@ -410,7 +428,7 @@ function renderFormModal(sub = null) {
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="form-billingday">每月扣费日</label>
+        <label class="form-label" for="form-billingday">扣费日</label>
         <select class="form-input" id="form-billingday">
           ${Array.from({ length: 31 }, (_, i) => i + 1).map((d) => `
             <option value="${d}" ${sub && sub.billingDay === d ? 'selected' : ''}>${d} 号</option>
@@ -444,166 +462,178 @@ function renderFormModal(sub = null) {
     </form>
   `;
 
-    // Emoji picker events
-    document.querySelectorAll('#emoji-picker .emoji-option').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            document.querySelectorAll('#emoji-picker .emoji-option').forEach((b) => b.classList.remove('emoji-option--selected'));
-            btn.classList.add('emoji-option--selected');
-            document.getElementById('form-icon').value = btn.dataset.emoji;
-        });
+  // Emoji picker events
+  document.querySelectorAll('#emoji-picker .emoji-option').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#emoji-picker .emoji-option').forEach((b) => b.classList.remove('emoji-option--selected'));
+      btn.classList.add('emoji-option--selected');
+      document.getElementById('form-icon').value = btn.dataset.emoji;
     });
+  });
 
-    // Form submit
-    document.getElementById('sub-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const data = {
-            name: document.getElementById('form-name').value.trim(),
-            amount: document.getElementById('form-amount').value,
-            category: document.getElementById('form-category').value,
-            icon: document.getElementById('form-icon').value,
-            billingDay: document.getElementById('form-billingday').value,
-            notes: document.getElementById('form-notes').value.trim(),
-        };
+  // Billing cycle change -> update amount label
+  const cycleSelect = document.getElementById('form-cycle');
+  const amountLabel = document.getElementById('form-amount-label');
+  function updateAmountLabel() {
+    const cycleId = cycleSelect.value;
+    const labels = { monthly: '每月金额 (¥)', quarterly: '每季金额 (¥)', yearly: '每年金额 (¥)' };
+    amountLabel.textContent = labels[cycleId] || '金额 (¥)';
+  }
+  cycleSelect.addEventListener('change', updateAmountLabel);
+  updateAmountLabel();
 
-        if (!data.name || !data.amount) return;
+  // Form submit
+  document.getElementById('sub-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const data = {
+      name: document.getElementById('form-name').value.trim(),
+      amount: document.getElementById('form-amount').value,
+      billingCycle: document.getElementById('form-cycle').value,
+      category: document.getElementById('form-category').value,
+      icon: document.getElementById('form-icon').value,
+      billingDay: document.getElementById('form-billingday').value,
+      notes: document.getElementById('form-notes').value.trim(),
+    };
 
-        try {
-            if (isEdit) {
-                await updateSubscription(editingId, data);
-                showToast('订阅已更新 ✅');
-            } else {
-                await addSubscription(data);
-                showToast('订阅已添加 🎉');
-            }
-            closeModal();
-            await refreshData();
-        } catch (err) {
-            console.error(err);
-            showToast('操作失败，请重试');
-        }
-    });
+    if (!data.name || !data.amount) return;
 
-    // Toggle active
-    if (isEdit) {
-        const toggleBtn = document.getElementById('btn-toggle-active');
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', async () => {
-                await updateSubscription(sub.id, { active: !sub.active });
-                showToast(sub.active ? '已暂停 ⏸️' : '已启用 🟢');
-                closeModal();
-                await refreshData();
-            });
-        }
+    try {
+      if (isEdit) {
+        await updateSubscription(editingId, data);
+        showToast('订阅已更新 ✅');
+      } else {
+        await addSubscription(data);
+        showToast('订阅已添加 🎉');
+      }
+      closeModal();
+      await refreshData();
+    } catch (err) {
+      console.error(err);
+      showToast('操作失败，请重试');
+    }
+  });
 
-        const deleteBtn = document.getElementById('btn-delete');
-        if (deleteBtn) {
-            deleteBtn.addEventListener('click', () => {
-                showConfirm(
-                    '删除订阅',
-                    `确定删除「${sub.name}」吗？此操作无法撤销。`,
-                    async () => {
-                        await deleteSubscription(sub.id);
-                        showToast('已删除 🗑️');
-                        closeModal();
-                        await refreshData();
-                    }
-                );
-            });
-        }
+  // Toggle active
+  if (isEdit) {
+    const toggleBtn = document.getElementById('btn-toggle-active');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', async () => {
+        await updateSubscription(sub.id, { active: !sub.active });
+        showToast(sub.active ? '已暂停 ⏸️' : '已启用 🟢');
+        closeModal();
+        await refreshData();
+      });
     }
 
-    openModal();
+    const deleteBtn = document.getElementById('btn-delete');
+    if (deleteBtn) {
+      deleteBtn.addEventListener('click', () => {
+        showConfirm(
+          '删除订阅',
+          `确定删除「${sub.name}」吗？此操作无法撤销。`,
+          async () => {
+            await deleteSubscription(sub.id);
+            showToast('已删除 🗑️');
+            closeModal();
+            await refreshData();
+          }
+        );
+      });
+    }
+  }
+
+  openModal();
 }
 
 // ===== Modal =====
 function openModal() {
-    document.getElementById('modal-overlay').classList.add('modal-overlay--active');
-    document.getElementById('modal-sheet').classList.add('modal-sheet--active');
-    document.body.style.overflow = 'hidden';
+  document.getElementById('modal-overlay').classList.add('modal-overlay--active');
+  document.getElementById('modal-sheet').classList.add('modal-sheet--active');
+  document.body.style.overflow = 'hidden';
 }
 
 function closeModal() {
-    document.getElementById('modal-overlay').classList.remove('modal-overlay--active');
-    document.getElementById('modal-sheet').classList.remove('modal-sheet--active');
-    document.body.style.overflow = '';
-    editingId = null;
+  document.getElementById('modal-overlay').classList.remove('modal-overlay--active');
+  document.getElementById('modal-sheet').classList.remove('modal-sheet--active');
+  document.body.style.overflow = '';
+  editingId = null;
 }
 
 // ===== Confirm Dialog =====
 let confirmCallback = null;
 
 function showConfirm(title, message, callback) {
-    document.getElementById('confirm-title').textContent = title;
-    document.getElementById('confirm-message').textContent = message;
-    document.getElementById('confirm-overlay').classList.add('modal-overlay--active');
-    document.getElementById('confirm-dialog').classList.add('confirm-dialog--active');
-    confirmCallback = callback;
+  document.getElementById('confirm-title').textContent = title;
+  document.getElementById('confirm-message').textContent = message;
+  document.getElementById('confirm-overlay').classList.add('modal-overlay--active');
+  document.getElementById('confirm-dialog').classList.add('confirm-dialog--active');
+  confirmCallback = callback;
 }
 
 function closeConfirm() {
-    document.getElementById('confirm-overlay').classList.remove('modal-overlay--active');
-    document.getElementById('confirm-dialog').classList.remove('confirm-dialog--active');
-    confirmCallback = null;
+  document.getElementById('confirm-overlay').classList.remove('modal-overlay--active');
+  document.getElementById('confirm-dialog').classList.remove('confirm-dialog--active');
+  confirmCallback = null;
 }
 
 // ===== Toast =====
 function showToast(msg) {
-    const toast = document.getElementById('toast');
-    toast.textContent = msg;
-    toast.classList.add('toast--visible');
-    setTimeout(() => toast.classList.remove('toast--visible'), 2500);
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('toast--visible');
+  setTimeout(() => toast.classList.remove('toast--visible'), 2500);
 }
 
 // ===== Events =====
 function bindEvents() {
-    // Navigation
-    document.querySelectorAll('.nav-item').forEach((btn) => {
-        btn.addEventListener('click', () => {
-            currentPage = btn.dataset.page;
-            renderApp();
-        });
+  // Navigation
+  document.querySelectorAll('.nav-item').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      currentPage = btn.dataset.page;
+      renderApp();
     });
+  });
 
-    // FAB
-    document.getElementById('btn-add').addEventListener('click', () => {
-        renderFormModal();
+  // FAB
+  document.getElementById('btn-add').addEventListener('click', () => {
+    renderFormModal();
+  });
+
+  // Modal close
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  document.getElementById('modal-overlay').addEventListener('click', closeModal);
+
+  // Confirm dialog
+  document.getElementById('confirm-cancel').addEventListener('click', closeConfirm);
+  document.getElementById('confirm-ok').addEventListener('click', () => {
+    if (confirmCallback) confirmCallback();
+    closeConfirm();
+  });
+  document.getElementById('confirm-overlay').addEventListener('click', closeConfirm);
+
+  // Sub items click -> edit
+  document.querySelectorAll('.sub-item[data-id]').forEach((item) => {
+    item.addEventListener('click', () => {
+      const sub = allSubs.find((s) => s.id === item.dataset.id);
+      if (sub) renderFormModal(sub);
     });
+  });
 
-    // Modal close
-    document.getElementById('modal-close').addEventListener('click', closeModal);
-    document.getElementById('modal-overlay').addEventListener('click', closeModal);
-
-    // Confirm dialog
-    document.getElementById('confirm-cancel').addEventListener('click', closeConfirm);
-    document.getElementById('confirm-ok').addEventListener('click', () => {
-        if (confirmCallback) confirmCallback();
-        closeConfirm();
+  // Category filter
+  document.querySelectorAll('.category-chip').forEach((chip) => {
+    chip.addEventListener('click', () => {
+      activeFilter = chip.dataset.filter;
+      renderApp();
     });
-    document.getElementById('confirm-overlay').addEventListener('click', closeConfirm);
-
-    // Sub items click -> edit
-    document.querySelectorAll('.sub-item[data-id]').forEach((item) => {
-        item.addEventListener('click', () => {
-            const sub = allSubs.find((s) => s.id === item.dataset.id);
-            if (sub) renderFormModal(sub);
-        });
-    });
-
-    // Category filter
-    document.querySelectorAll('.category-chip').forEach((chip) => {
-        chip.addEventListener('click', () => {
-            activeFilter = chip.dataset.filter;
-            renderApp();
-        });
-    });
+  });
 }
 
 // ===== Data =====
 async function refreshData() {
-    allSubs = await getAllSubscriptions();
-    renderApp();
+  allSubs = await getAllSubscriptions();
+  renderApp();
 }
 
 export async function initApp() {
-    await refreshData();
+  await refreshData();
 }

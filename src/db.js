@@ -15,6 +15,13 @@ export const CATEGORIES = [
     { id: 'other', name: '其他', icon: '📦', gradient: 'var(--gradient-blue)' },
 ];
 
+// Billing cycles
+export const BILLING_CYCLES = [
+    { id: 'monthly', name: '月付', label: '/月', months: 1 },
+    { id: 'quarterly', name: '季付', label: '/季', months: 3 },
+    { id: 'yearly', name: '年付', label: '/年', months: 12 },
+];
+
 // Common emoji icons for quick picking
 export const EMOJI_OPTIONS = [
     '🎬', '🎵', '🎮', '📺', '☁️', '💻',
@@ -71,7 +78,9 @@ export async function addSubscription(sub) {
         amount: parseFloat(sub.amount),
         category: sub.category || 'other',
         icon: sub.icon || '📦',
+        billingCycle: sub.billingCycle || 'monthly',
         billingDay: parseInt(sub.billingDay) || 1,
+        billingMonth: parseInt(sub.billingMonth) || (new Date().getMonth() + 1),
         startDate: sub.startDate || new Date().toISOString().split('T')[0],
         notes: sub.notes || '',
         active: sub.active !== undefined ? sub.active : true,
@@ -120,4 +129,14 @@ export async function deleteSubscription(id) {
 
 export function getCategoryById(id) {
     return CATEGORIES.find((c) => c.id === id) || CATEGORIES[CATEGORIES.length - 1];
+}
+
+export function getBillingCycleById(id) {
+    return BILLING_CYCLES.find((c) => c.id === id) || BILLING_CYCLES[0];
+}
+
+// Get monthly equivalent amount
+export function getMonthlyAmount(sub) {
+    const cycle = getBillingCycleById(sub.billingCycle);
+    return sub.amount / cycle.months;
 }
