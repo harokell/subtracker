@@ -1,7 +1,17 @@
 // ===== Version & What's New =====
-export const APP_VERSION = '1.4.0';
+export const APP_VERSION = '1.5.0';
 
 export const CHANGELOG = [
+    {
+        version: '1.5.0',
+        date: '2025-02-25',
+        title: '💾 备份与恢复',
+        changes: [
+            '「统计」页底新增数据安全设置',
+            '支持一键导出所有数据到本地',
+            '支持从备份文件快速恢复数据',
+        ],
+    },
     {
         version: '1.4.0',
         date: '2025-02-25',

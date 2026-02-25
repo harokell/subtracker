@@ -184,3 +184,59 @@ export function getLastBillingDate(sub) {
 export function formatBillingDate(date) {
     return `${date.getMonth() + 1}月${date.getDate()}日`;
 }
+
+// ===== Backup & Restore =====
+
+export async function exportData() {
+    const subs = await getAllSubscriptions();
+    const data = {
+        app: 'SubTracker',
+        version: DB_VERSION,
+        exportDate: new Date().toISOString(),
+        subscriptions: subs
+    };
+    return JSON.stringify(data, null, 2);
+}
+
+export async function importData(jsonString) {
+    try {
+        const data = JSON.parse(jsonString);
+        if (!data || data.app !== 'SubTracker' || !Array.isArray(data.subscriptions)) {
+            throw new Error('无效的备份文件');
+        }
+
+        const database = await openDB();
+
+        return new Promise((resolve, reject) => {
+            const tx = database.transaction(STORE_NAME, 'readwrite');
+            const store = tx.objectStore(STORE_NAME);
+
+            // Clear existing data before import
+            const clearReq = store.clear();
+
+            clearReq.onsuccess = () => {
+                let count = 0;
+                if (data.subscriptions.length === 0) {
+                    resolve(0);
+                    return;
+                }
+
+                data.subscriptions.forEach(sub => {
+                    const addReq = store.add(sub);
+                    addReq.onsuccess = () => {
+                        count++;
+                        if (count === data.subscriptions.length) {
+                            resolve(count);
+                        }
+                    };
+                    addReq.onerror = () => {
+                        reject(addReq.error);
+                    };
+                });
+            };
+            clearReq.onerror = () => reject(clearReq.error);
+        });
+    } catch (e) {
+        throw new Error('解析备份文件失败，请确保选择了正确的 JSON 文件。');
+    }
+}

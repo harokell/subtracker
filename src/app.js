@@ -14,6 +14,8 @@ import {
   CATEGORIES,
   BILLING_CYCLES,
   EMOJI_OPTIONS,
+  exportData,
+  importData,
 } from './db.js';
 import { APP_VERSION, getUnseenChanges, setSeenVersion } from './version.js';
 
@@ -381,6 +383,24 @@ function renderStatsPage() {
       </div>
     </div>
     ` : ''}
+
+    <div class="section animate-fadeInUp delay-4">
+      <div class="section__header">
+        <h2 class="section__title" style="color:var(--text-secondary);font-size:var(--font-base);">数据安全</h2>
+      </div>
+      <div style="display:flex;gap:var(--space-sm);">
+        <button class="btn btn--ghost" id="btn-export" style="flex:1;font-size:0.85rem;padding:var(--space-sm);">
+          💾 导出备份
+        </button>
+        <button class="btn btn--ghost" id="btn-import" style="flex:1;font-size:0.85rem;padding:var(--space-sm);">
+          📂 恢复备份
+        </button>
+      </div>
+      <p style="font-size:0.75rem;color:var(--text-muted);margin-top:var(--space-sm);text-align:center;">
+        定期导出备份以防数据丢失。恢复备份将覆盖现有数据。
+      </p>
+      <input type="file" id="import-file" accept=".json" style="display:none;" />
+    </div>
   `;
 }
 
@@ -627,6 +647,59 @@ function bindEvents() {
       renderApp();
     });
   });
+
+  // Backup / Restore
+  const btnExport = document.getElementById('btn-export');
+  if (btnExport) {
+    btnExport.addEventListener('click', async () => {
+      try {
+        const jsonStr = await exportData();
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const dateStr = new Date().toISOString().split('T')[0];
+        a.download = `subtracker-backup-${dateStr}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('备份已保存 💾');
+      } catch (err) {
+        console.error(err);
+        showToast('导出失败');
+      }
+    });
+  }
+
+  const btnImport = document.getElementById('btn-import');
+  const fileInput = document.getElementById('import-file');
+  if (btnImport && fileInput) {
+    btnImport.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      showConfirm(
+        '恢复备份',
+        '恢复将覆盖当前所有订阅数据。确定要导入这些数据吗？',
+        () => {
+          const reader = new FileReader();
+          reader.onload = async (ev) => {
+            try {
+              const count = await importData(ev.target.result);
+              showToast(`成功恢复 ${count} 条记录 📂`);
+              await refreshData();
+            } catch (err) {
+              console.error(err);
+              alert(err.message || '导入失败，请检查文件格式是否正确');
+            }
+          };
+          reader.readAsText(file);
+        }
+      );
+      // Reset input so the same file can be selected again
+      e.target.value = '';
+    });
+  }
 }
 
 // ===== Data =====
