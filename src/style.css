@@ -1013,3 +1013,61 @@ select.form-input option {
   pointer-events: auto;
   transform: translate(-50%, -50%) scale(1);
 }
+
+/* ===== Update Banner ===== */
+.update-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: calc(var(--safe-top) + 8px) 16px 8px;
+  background: var(--gradient-purple);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  z-index: 300;
+  animation: slideDown 400ms ease both;
+  box-shadow: 0 4px 20px rgba(168, 85, 247, 0.4);
+}
+
+@keyframes slideDown {
+  from {
+    transform: translateY(-100%);
+  }
+
+  to {
+    transform: translateY(0);
+  }
+}
+
+.update-banner__text {
+  flex: 1;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #fff;
+}
+
+.update-banner__btn {
+  padding: 6px 16px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: background 0.2s;
+}
+
+.update-banner__btn:active {
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.update-banner__close {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 0.9rem;
+}

@@ -5,7 +5,7 @@ export default defineConfig({
     base: '/subtracker/',
     plugins: [
         VitePWA({
-            registerType: 'autoUpdate',
+            registerType: 'prompt',
             includeAssets: ['favicon.svg'],
             manifest: {
                 name: '订阅记账 - SubTracker',

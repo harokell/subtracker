@@ -1,14 +1,15 @@
 // ===== Version & What's New =====
-export const APP_VERSION = '1.3.0';
+export const APP_VERSION = '1.4.0';
 
 export const CHANGELOG = [
     {
-        version: '1.3.0',
+        version: '1.4.0',
         date: '2025-02-25',
-        title: '📢 更新通知',
+        title: '⚡ 更新与数据保护',
         changes: [
-            '打开 App 自动提醒新功能',
-            '点击「知道了」后不再重复提醒',
+            '新版本到达时顶部显示更新提示',
+            '点击即可立即更新，无需手动刷新',
+            '请求持久化存储，防止数据被清除',
         ],
     },
     {
