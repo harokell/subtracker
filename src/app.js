@@ -15,6 +15,7 @@ import {
   BILLING_CYCLES,
   EMOJI_OPTIONS,
 } from './db.js';
+import { APP_VERSION, getUnseenChanges, setSeenVersion } from './version.js';
 
 let currentPage = 'dashboard';
 let allSubs = [];
@@ -137,6 +138,11 @@ export function renderApp() {
     </div>
 
     <div class="toast" id="toast"></div>
+
+    <div class="modal-overlay" id="whatsnew-overlay"></div>
+    <div class="whatsnew-dialog" id="whatsnew-dialog">
+      <div class="whatsnew-dialog__content" id="whatsnew-content"></div>
+    </div>
   `;
 
   bindEvents();
@@ -631,4 +637,49 @@ async function refreshData() {
 
 export async function initApp() {
   await refreshData();
+  checkWhatsNew();
+}
+
+// ===== What's New =====
+function checkWhatsNew() {
+  const unseen = getUnseenChanges();
+  if (unseen.length === 0) return;
+  showWhatsNew(unseen);
+}
+
+function showWhatsNew(entries) {
+  const content = document.getElementById('whatsnew-content');
+  content.innerHTML = `
+    <div style="text-align:center;font-size:2rem;margin-bottom:8px;">🆕</div>
+    <h2 style="text-align:center;font-size:1.2rem;margin-bottom:16px;">有新功能啦！</h2>
+    ${entries.map((entry) => `
+      <div style="margin-bottom:16px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+          <span style="font-size:1rem;font-weight:600;">${entry.title}</span>
+          <span style="font-size:0.7rem;color:rgba(168,85,247,0.6);background:rgba(168,85,247,0.1);padding:2px 8px;border-radius:12px;">v${entry.version}</span>
+        </div>
+        <ul style="list-style:none;padding:0;margin:0;">
+          ${entry.changes.map((c) => `
+            <li style="font-size:0.85rem;color:rgba(255,255,255,0.75);padding:4px 0;padding-left:16px;position:relative;">
+              <span style="position:absolute;left:0;color:rgba(168,85,247,0.8);">•</span>
+              ${c}
+            </li>
+          `).join('')}
+        </ul>
+      </div>
+    `).join('')}
+    <button class="btn btn--primary" id="whatsnew-close" style="width:100%;margin-top:8px;">知道了 👍</button>
+  `;
+
+  document.getElementById('whatsnew-overlay').classList.add('modal-overlay--active');
+  document.getElementById('whatsnew-dialog').classList.add('whatsnew-dialog--active');
+
+  document.getElementById('whatsnew-close').addEventListener('click', closeWhatsNew);
+  document.getElementById('whatsnew-overlay').addEventListener('click', closeWhatsNew);
+}
+
+function closeWhatsNew() {
+  document.getElementById('whatsnew-overlay').classList.remove('modal-overlay--active');
+  document.getElementById('whatsnew-dialog').classList.remove('whatsnew-dialog--active');
+  setSeenVersion(APP_VERSION);
 }
