@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig({
+    base: '/subtracker/',
     plugins: [
         VitePWA({
             registerType: 'autoUpdate',
@@ -14,8 +15,8 @@ export default defineConfig({
                 background_color: '#0f0a1e',
                 display: 'standalone',
                 orientation: 'portrait',
-                scope: '/',
-                start_url: '/',
+                scope: '/subtracker/',
+                start_url: '/subtracker/',
                 icons: [
                     {
                         src: 'pwa-192x192.png',
