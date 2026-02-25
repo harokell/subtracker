@@ -165,6 +165,21 @@ export function getDaysUntilNextBilling(sub) {
     return diff;
 }
 
+// Calculate last billing date (one cycle before next billing)
+export function getLastBillingDate(sub) {
+    const cycle = getBillingCycleById(sub.billingCycle);
+    const next = getNextBillingDate(sub);
+    const first = new Date(sub.firstBillingDate || sub.startDate || new Date().toISOString().split('T')[0]);
+    first.setHours(0, 0, 0, 0);
+
+    const last = new Date(next);
+    last.setMonth(last.getMonth() - cycle.months);
+
+    // If last billing is before first billing date, there's no previous billing
+    if (last < first) return null;
+    return last;
+}
+
 // Format date to readable string
 export function formatBillingDate(date) {
     return `${date.getMonth() + 1}月${date.getDate()}日`;

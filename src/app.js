@@ -9,6 +9,7 @@ import {
   getMonthlyAmount,
   getNextBillingDate,
   getDaysUntilNextBilling,
+  getLastBillingDate,
   formatBillingDate,
   CATEGORIES,
   BILLING_CYCLES,
@@ -262,13 +263,15 @@ function renderListPage() {
     const cycle = getBillingCycleById(s.billingCycle);
     const monthlyAmt = getMonthlyAmount(s);
     const nextDate = getNextBillingDate(s);
+    const lastDate = getLastBillingDate(s);
     const daysUntil = getDaysUntilNextBilling(s);
     return `
             <div class="sub-item ${!s.active ? 'sub-item--inactive' : ''} animate-fadeInUp delay-${Math.min(i + 1, 6)}" data-id="${s.id}">
               <div class="sub-item__icon" style="background: ${cat.gradient};">${s.icon}</div>
               <div class="sub-item__info">
                 <div class="sub-item__name">${s.name}</div>
-                <div class="sub-item__detail">${cat.icon} ${cat.name} · ${cycle.name} · 下次${formatBillingDate(nextDate)}${!s.active ? ' · 已暂停' : ''}</div>
+                <div class="sub-item__detail">${cat.icon} ${cat.name} · ${cycle.name}${!s.active ? ' · 已暂停' : ''}</div>
+                <div class="sub-item__detail" style="margin-top:2px;font-size:0.7rem;">${lastDate ? '上次 ' + formatBillingDate(lastDate) + ' → ' : ''}下次 ${formatBillingDate(nextDate)}（${daysUntil === 0 ? '今天' : daysUntil + '天后'}）</div>
               </div>
               <div class="sub-item__amount">
                 ${formatCurrency(s.amount)}
