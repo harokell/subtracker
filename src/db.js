@@ -79,7 +79,7 @@ export async function addSubscription(sub) {
         category: sub.category || 'other',
         icon: sub.icon || '📦',
         billingCycle: sub.billingCycle || 'monthly',
-        firstBillingDate: sub.firstBillingDate || new Date().toISOString().split('T')[0],
+        nextBillingDate: sub.nextBillingDate || sub.firstBillingDate || new Date().toISOString().split('T')[0],
         notes: sub.notes || '',
         active: sub.active !== undefined ? sub.active : true,
         createdAt: Date.now(),
@@ -138,17 +138,21 @@ export function getMonthlyAmount(sub) {
     return sub.amount / cycle.months;
 }
 
-// Calculate next billing date from firstBillingDate and cycle
+// Calculate next billing date from nextBillingDate and cycle
 export function getNextBillingDate(sub) {
     const cycle = getBillingCycleById(sub.billingCycle);
-    const first = new Date(sub.firstBillingDate || sub.startDate || new Date().toISOString().split('T')[0]);
+    // Prefer nextBillingDate, fallback to old firstBillingDate or startDate for backwards compat
+    const baseDateStr = sub.nextBillingDate || sub.firstBillingDate || sub.startDate || new Date().toISOString().split('T')[0];
+    const baseDate = new Date(baseDateStr);
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    let next = new Date(first);
+    let next = new Date(baseDate);
     next.setHours(0, 0, 0, 0);
 
-    // Keep adding cycle months until we reach a date >= today
+    // If the configured next billing date string is already in the past, 
+    // keep adding cycle months until we reach a date >= today
     while (next < today) {
         next.setMonth(next.getMonth() + cycle.months);
     }
@@ -169,14 +173,10 @@ export function getDaysUntilNextBilling(sub) {
 export function getLastBillingDate(sub) {
     const cycle = getBillingCycleById(sub.billingCycle);
     const next = getNextBillingDate(sub);
-    const first = new Date(sub.firstBillingDate || sub.startDate || new Date().toISOString().split('T')[0]);
-    first.setHours(0, 0, 0, 0);
 
     const last = new Date(next);
     last.setMonth(last.getMonth() - cycle.months);
 
-    // If last billing is before first billing date, there's no previous billing
-    if (last < first) return null;
     return last;
 }
 

@@ -452,9 +452,9 @@ function renderFormModal(sub = null) {
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="form-billingdate">首次扣费日期</label>
-        <input class="form-input" type="date" id="form-billingdate" value="${sub ? (sub.firstBillingDate || sub.startDate || '') : new Date().toISOString().split('T')[0]}" required />
-        <div style="font-size:0.75rem;color:rgba(168,85,247,0.6);margin-top:4px;">已开通的会员填开通日期，系统会自动计算下次扣费时间</div>
+        <label class="form-label" for="form-billingdate">下次扣费日期</label>
+        <input class="form-input" type="date" id="form-billingdate" value="${sub ? (sub.nextBillingDate || sub.firstBillingDate || sub.startDate || '') : new Date().toISOString().split('T')[0]}" required />
+        <div style="font-size:0.75rem;color:rgba(168,85,247,0.6);margin-top:4px;">选择下一次扣费的日期，系统将据此推算未来的扣费时间</div>
       </div>
 
       <div class="form-group">
@@ -512,7 +512,7 @@ function renderFormModal(sub = null) {
       billingCycle: document.getElementById('form-cycle').value,
       category: document.getElementById('form-category').value,
       icon: document.getElementById('form-icon').value,
-      firstBillingDate: document.getElementById('form-billingdate').value,
+      nextBillingDate: document.getElementById('form-billingdate').value,
       notes: document.getElementById('form-notes').value.trim(),
     };
 

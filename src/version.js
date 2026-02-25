@@ -1,7 +1,16 @@
 // ===== Version & What's New =====
-export const APP_VERSION = '1.5.0';
+export const APP_VERSION = '1.5.1';
 
 export const CHANGELOG = [
+    {
+        version: '1.5.1',
+        date: '2025-02-25',
+        title: '📅 日期选择优化',
+        changes: [
+            '表单中的「首次扣费日期」改为「下次扣费日期」',
+            '直接选择下一次将要扣费的日期，更符合直觉',
+        ],
+    },
     {
         version: '1.5.0',
         date: '2025-02-25',
