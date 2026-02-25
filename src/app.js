@@ -7,6 +7,9 @@ import {
   getCategoryById,
   getBillingCycleById,
   getMonthlyAmount,
+  getNextBillingDate,
+  getDaysUntilNextBilling,
+  formatBillingDate,
   CATEGORIES,
   BILLING_CYCLES,
   EMOJI_OPTIONS,
@@ -26,20 +29,10 @@ function getToday() {
   return new Date();
 }
 
-function getDaysUntilBilling(billingDay) {
-  const today = getToday();
-  const currentDay = today.getDate();
-  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-
-  if (billingDay === currentDay) return 0;
-  if (billingDay > currentDay) return billingDay - currentDay;
-  return daysInMonth - currentDay + billingDay;
-}
-
 function getUpcomingSubs(subs, limit = 5) {
   return subs
     .filter((s) => s.active)
-    .map((s) => ({ ...s, daysUntil: getDaysUntilBilling(s.billingDay) }))
+    .map((s) => ({ ...s, daysUntil: getDaysUntilNextBilling(s), nextDate: getNextBillingDate(s) }))
     .sort((a, b) => a.daysUntil - b.daysUntil)
     .slice(0, limit);
 }
@@ -203,7 +196,7 @@ function renderDashboard() {
             <div class="upcoming-card">
               <div class="upcoming-card__icon">${s.icon}</div>
               <div class="upcoming-card__name">${s.name}</div>
-              <div class="upcoming-card__date">${s.daysUntil === 0 ? '今天' : s.daysUntil + '天后'} · ${s.billingDay}号</div>
+              <div class="upcoming-card__date">${s.daysUntil === 0 ? '今天' : s.daysUntil + '天后'} · ${formatBillingDate(s.nextDate)}</div>
               <div class="upcoming-card__amount">${formatCurrency(s.amount)}<span style="font-size:0.7rem;color:rgba(168,85,247,0.7);">${cycle.label}</span></div>
             </div>
           `;
@@ -268,12 +261,14 @@ function renderListPage() {
     const cat = getCategoryById(s.category);
     const cycle = getBillingCycleById(s.billingCycle);
     const monthlyAmt = getMonthlyAmount(s);
+    const nextDate = getNextBillingDate(s);
+    const daysUntil = getDaysUntilNextBilling(s);
     return `
             <div class="sub-item ${!s.active ? 'sub-item--inactive' : ''} animate-fadeInUp delay-${Math.min(i + 1, 6)}" data-id="${s.id}">
               <div class="sub-item__icon" style="background: ${cat.gradient};">${s.icon}</div>
               <div class="sub-item__info">
                 <div class="sub-item__name">${s.name}</div>
-                <div class="sub-item__detail">${cat.icon} ${cat.name} · ${cycle.name} · ${s.billingDay}号${!s.active ? ' · 已暂停' : ''}</div>
+                <div class="sub-item__detail">${cat.icon} ${cat.name} · ${cycle.name} · 下次${formatBillingDate(nextDate)}${!s.active ? ' · 已暂停' : ''}</div>
               </div>
               <div class="sub-item__amount">
                 ${formatCurrency(s.amount)}
@@ -428,12 +423,9 @@ function renderFormModal(sub = null) {
       </div>
 
       <div class="form-group">
-        <label class="form-label" for="form-billingday">扣费日</label>
-        <select class="form-input" id="form-billingday">
-          ${Array.from({ length: 31 }, (_, i) => i + 1).map((d) => `
-            <option value="${d}" ${sub && sub.billingDay === d ? 'selected' : ''}>${d} 号</option>
-          `).join('')}
-        </select>
+        <label class="form-label" for="form-billingdate">首次扣费日期</label>
+        <input class="form-input" type="date" id="form-billingdate" value="${sub ? (sub.firstBillingDate || sub.startDate || '') : new Date().toISOString().split('T')[0]}" required />
+        <div style="font-size:0.75rem;color:rgba(168,85,247,0.6);margin-top:4px;">已开通的会员填开通日期，系统会自动计算下次扣费时间</div>
       </div>
 
       <div class="form-group">
@@ -491,7 +483,7 @@ function renderFormModal(sub = null) {
       billingCycle: document.getElementById('form-cycle').value,
       category: document.getElementById('form-category').value,
       icon: document.getElementById('form-icon').value,
-      billingDay: document.getElementById('form-billingday').value,
+      firstBillingDate: document.getElementById('form-billingdate').value,
       notes: document.getElementById('form-notes').value.trim(),
     };
 

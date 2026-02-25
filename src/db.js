@@ -79,9 +79,7 @@ export async function addSubscription(sub) {
         category: sub.category || 'other',
         icon: sub.icon || '📦',
         billingCycle: sub.billingCycle || 'monthly',
-        billingDay: parseInt(sub.billingDay) || 1,
-        billingMonth: parseInt(sub.billingMonth) || (new Date().getMonth() + 1),
-        startDate: sub.startDate || new Date().toISOString().split('T')[0],
+        firstBillingDate: sub.firstBillingDate || new Date().toISOString().split('T')[0],
         notes: sub.notes || '',
         active: sub.active !== undefined ? sub.active : true,
         createdAt: Date.now(),
@@ -107,7 +105,6 @@ export async function updateSubscription(id, updates) {
             if (!existing) return reject(new Error('Not found'));
             const updated = { ...existing, ...updates, updatedAt: Date.now() };
             if (updates.amount !== undefined) updated.amount = parseFloat(updates.amount);
-            if (updates.billingDay !== undefined) updated.billingDay = parseInt(updates.billingDay);
             const putReq = store.put(updated);
             putReq.onsuccess = () => resolve(updated);
             putReq.onerror = () => reject(putReq.error);
@@ -139,4 +136,36 @@ export function getBillingCycleById(id) {
 export function getMonthlyAmount(sub) {
     const cycle = getBillingCycleById(sub.billingCycle);
     return sub.amount / cycle.months;
+}
+
+// Calculate next billing date from firstBillingDate and cycle
+export function getNextBillingDate(sub) {
+    const cycle = getBillingCycleById(sub.billingCycle);
+    const first = new Date(sub.firstBillingDate || sub.startDate || new Date().toISOString().split('T')[0]);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    let next = new Date(first);
+    next.setHours(0, 0, 0, 0);
+
+    // Keep adding cycle months until we reach a date >= today
+    while (next < today) {
+        next.setMonth(next.getMonth() + cycle.months);
+    }
+
+    return next;
+}
+
+// Get days until next billing
+export function getDaysUntilNextBilling(sub) {
+    const next = getNextBillingDate(sub);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const diff = Math.round((next - today) / (1000 * 60 * 60 * 24));
+    return diff;
+}
+
+// Format date to readable string
+export function formatBillingDate(date) {
+    return `${date.getMonth() + 1}月${date.getDate()}日`;
 }
