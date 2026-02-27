@@ -16,6 +16,7 @@ import {
   EMOJI_OPTIONS,
   exportData,
   importData,
+  exportLatex,
 } from './db.js';
 import { APP_VERSION, getUnseenChanges, setSeenVersion } from './version.js';
 
@@ -396,6 +397,9 @@ function renderStatsPage() {
           📂 恢复备份
         </button>
       </div>
+      <button class="btn btn--ghost" id="btn-export-latex" style="width:100%;font-size:0.85rem;padding:var(--space-sm);margin-top:var(--space-sm);">
+        📄 导出 LaTeX 报告（Overleaf）
+      </button>
       <p style="font-size:0.75rem;color:var(--text-muted);margin-top:var(--space-sm);text-align:center;">
         定期导出备份以防数据丢失。恢复备份将覆盖现有数据。
       </p>
@@ -698,6 +702,26 @@ function bindEvents() {
       );
       // Reset input so the same file can be selected again
       e.target.value = '';
+    });
+  }
+  const btnExportLatex = document.getElementById('btn-export-latex');
+  if (btnExportLatex) {
+    btnExportLatex.addEventListener('click', async () => {
+      try {
+        const texStr = await exportLatex();
+        const blob = new Blob([texStr], { type: 'application/x-tex' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const dateStr = new Date().toISOString().split('T')[0];
+        a.download = `subtracker-report-${dateStr}.tex`;
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('LaTeX 报告已导出 📄');
+      } catch (err) {
+        console.error(err);
+        showToast('导出失败');
+      }
     });
   }
 }

@@ -185,6 +185,109 @@ export function formatBillingDate(date) {
     return `${date.getMonth() + 1}月${date.getDate()}日`;
 }
 
+// ===== LaTeX Export =====
+
+function escapeLatex(str) {
+    if (str === null || str === undefined) return '';
+    // Strip emoji and other non-BMP characters first
+    const stripped = String(str)
+        .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
+        .replace(/[\u2600-\u27BF]/g, '');
+    // Escape all LaTeX special characters in a single pass to avoid ordering issues
+    return stripped.replace(/[\\&%$#_{}~^]/g, (ch) => {
+        switch (ch) {
+            case '\\': return '\\textbackslash{}';
+            case '&':  return '\\&';
+            case '%':  return '\\%';
+            case '$':  return '\\$';
+            case '#':  return '\\#';
+            case '_':  return '\\_';
+            case '{':  return '\\{';
+            case '}':  return '\\}';
+            case '~':  return '\\textasciitilde{}';
+            case '^':  return '\\textasciicircum{}';
+            default:   return ch;
+        }
+    }).trim();
+}
+
+export async function exportLatex() {
+    const subs = await getAllSubscriptions();
+    const activeSubs = subs.filter((s) => s.active);
+    const total = activeSubs.reduce((sum, s) => sum + getMonthlyAmount(s), 0);
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日`;
+
+    const rows = subs
+        .sort((a, b) => {
+            if (a.active !== b.active) return b.active - a.active;
+            return getMonthlyAmount(b) - getMonthlyAmount(a);
+        })
+        .map((s) => {
+            const cat = getCategoryById(s.category);
+            const cycle = getBillingCycleById(s.billingCycle);
+            const monthly = getMonthlyAmount(s);
+            const nextDate = getNextBillingDate(s);
+            const nextStr = `${nextDate.getMonth() + 1}月${nextDate.getDate()}日`;
+            const status = s.active ? '活跃' : '暂停';
+            return `  ${escapeLatex(s.name)} & ${escapeLatex(cat.name)} & ${escapeLatex(cycle.name)} & \\yen${s.amount.toFixed(2)} & \\yen${monthly.toFixed(2)} & ${nextStr} & ${status} \\\\`;
+        })
+        .join('\n');
+
+    return `% SubTracker 订阅支出报告
+% 使用说明：在 Overleaf 中新建项目，上传此文件，编译器选择 XeLaTeX，点击编译即可生成 PDF。
+\\documentclass[UTF8, a4paper]{ctexart}
+\\usepackage{booktabs}
+\\usepackage{longtable}
+\\usepackage{geometry}
+\\usepackage{array}
+\\usepackage{textcomp}
+\\geometry{margin=2cm}
+
+\\title{订阅支出报告}
+\\date{${dateStr}}
+\\author{SubTracker}
+
+\\begin{document}
+\\maketitle
+
+\\section{概览}
+
+\\begin{tabular}{ll}
+\\toprule
+项目 & 数值 \\\\
+\\midrule
+每月总支出   & \\yen${total.toFixed(2)} \\\\
+活跃订阅数   & ${activeSubs.length} 项 \\\\
+年度预估支出 & \\yen${(total * 12).toFixed(2)} \\\\
+日均支出     & \\yen${(total / 30).toFixed(2)} \\\\
+\\bottomrule
+\\end{tabular}
+
+\\section{订阅列表}
+
+\\begin{longtable}{lllrrll}
+\\toprule
+名称 & 分类 & 周期 & 金额 & 月均 & 下次扣费 & 状态 \\\\
+\\midrule
+\\endfirsthead
+\\multicolumn{7}{l}{\\small（续上页）} \\\\
+\\toprule
+名称 & 分类 & 周期 & 金额 & 月均 & 下次扣费 & 状态 \\\\
+\\midrule
+\\endhead
+\\midrule
+\\multicolumn{7}{r}{\\small（续下页）} \\\\
+\\endfoot
+\\bottomrule
+\\endlastfoot
+${rows}
+\\end{longtable}
+
+\\end{document}
+`;
+}
+
 // ===== Backup & Restore =====
 
 export async function exportData() {

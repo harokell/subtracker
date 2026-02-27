@@ -1,7 +1,17 @@
 // ===== Version & What's New =====
-export const APP_VERSION = '1.5.1';
+export const APP_VERSION = '1.6.0';
 
 export const CHANGELOG = [
+    {
+        version: '1.6.0',
+        date: '2026-02-27',
+        title: '📄 LaTeX 导出',
+        changes: [
+            '新增「导出 LaTeX 报告」功能，可在「统计」页导出 .tex 文件',
+            '上传到 Overleaf 并选择 XeLaTeX 编译，即可生成精美 PDF 报告',
+            '报告包含月度支出概览与完整订阅明细表格',
+        ],
+    },
     {
         version: '1.5.1',
         date: '2025-02-25',
